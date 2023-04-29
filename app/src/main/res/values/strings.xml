@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Translingo</string>
+    <string name="translate_from">Translate from</string>
+    <string name="all_languages">All Languages</string>
+    <string name="translate_to">Translate to</string>
+    <string name="please_select_language">Please select a language</string>
+    <string name="loading">Loading...</string>
+</resources>
