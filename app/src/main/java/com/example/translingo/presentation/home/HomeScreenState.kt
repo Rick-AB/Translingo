@@ -7,7 +7,8 @@ data class HomeScreenState(
     val originalText: String,
     val translatedText: String,
     val sourceLanguage: Language,
-    val targetLanguage: Language
+    val targetLanguage: Language,
+    val loading: Boolean
 ) {
     companion object {
         fun default(): HomeScreenState {
@@ -16,7 +17,8 @@ data class HomeScreenState(
                 String.Empty,
                 String.Empty,
                 emptyLanguage,
-                emptyLanguage
+                emptyLanguage,
+                loading = false
             )
         }
     }

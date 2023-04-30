@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Transition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.with
@@ -12,6 +14,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.*
@@ -21,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -30,33 +36,42 @@ import com.example.translingo.R
 import com.example.translingo.domain.model.Language
 import com.example.translingo.presentation.languages.LanguageType
 import com.example.translingo.presentation.navigation.Destinations
+import com.example.translingo.presentation.ui.components.TopAppBarIcon
 import com.example.translingo.presentation.ui.theme.Cerulean
 import com.example.translingo.presentation.ui.theme.TranslingoTheme
 import com.example.translingo.presentation.ui.theme.White
 import com.kiwi.navigationcompose.typed.Destination
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HomeScreen(
     homeScreenState: HomeScreenState,
     onEvent: (HomeScreenEvent) -> Unit,
     onNavigate: (Destination) -> Unit
 ) {
+    val focusManager = LocalFocusManager.current
+    val isTranslationActive = WindowInsets.isImeVisible
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        topBar = { HomeScreenTopAppBar() },
-    ) { padding ->
+        topBar = {
+            HomeScreenTopAppBar(
+                isTranslationActive = isTranslationActive
+            ) { focusManager.clearFocus() }
+        },
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.primary)
-                .padding(top = padding.calculateTopPadding())
+                .padding(top = innerPadding.calculateTopPadding())
+                .navigationBarsPadding()
+                .imePadding()
         ) {
             TranslationBody(
                 homeScreenState = homeScreenState,
                 onEvent = onEvent,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.7f)
+                    .weight(0.7f)
                     .background(
                         color = White,
                         shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
@@ -65,9 +80,7 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
             LanguageButtons(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .imePadding(),
+                modifier = Modifier.fillMaxWidth(),
                 homeScreenState = homeScreenState,
                 onEvent = onEvent,
                 onNavigate = onNavigate
@@ -162,9 +175,19 @@ fun LanguageButton(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreenTopAppBar() {
+fun HomeScreenTopAppBar(isTranslationActive: Boolean, onBackArrowClick: () -> Unit) {
+    AnimatedContent(
+        targetState = isTranslationActive,
+        transitionSpec = { fadeIn(tween(300)) with fadeOut(tween(500)) }
+    ) { isTranslationActiveState ->
+        if (isTranslationActiveState) ActiveTopAppBar(onBackArrowClick = onBackArrowClick)
+        else DefaultTopAppBar()
+    }
+}
+
+@Composable
+fun DefaultTopAppBar() {
     CenterAlignedTopAppBar(
         title = {
             Text(
@@ -175,14 +198,24 @@ fun HomeScreenTopAppBar() {
                 )
             )
         },
+        navigationIcon = { TopAppBarIcon(imageVector = Icons.Default.Star) { } },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = White)
+    )
+}
+
+@Composable
+fun ActiveTopAppBar(onBackArrowClick: () -> Unit) {
+    TopAppBar(
+        title = { },
         navigationIcon = {
-            IconButton(onClick = { }) {
-                Icon(
-                    imageVector = Icons.Default.Star,
-                    contentDescription = "",
-                    tint = Color.Black
-                )
-            }
+            TopAppBarIcon(
+                imageVector = Icons.Default.ArrowBack,
+                onClick = onBackArrowClick
+            )
+        },
+        actions = {
+            TopAppBarIcon(imageVector = Icons.Default.History) { }
+            TopAppBarIcon(imageVector = Icons.Default.MoreVert) { }
         },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = White)
     )
@@ -249,7 +282,7 @@ fun HomePrev() {
         val source = Language("en", "English")
         val target = Language("es", "Spanish")
         val state = remember {
-            mutableStateOf(HomeScreenState("HER", "Ella", source, target))
+            mutableStateOf(HomeScreenState("HER", "Ella", source, target, false))
         }
         HomeScreen(state.value, {}, {})
     }

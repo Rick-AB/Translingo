@@ -25,12 +25,14 @@ class HomeViewModel @Inject constructor(
 ) : ViewModel() {
     private val sourceLanguageFlow = languageRepository.getSourceLanguageAsFlow()
     private val targetLanguageFlow = languageRepository.getTargetLanguageAsFlow()
+    private val loadingFlow = MutableStateFlow(false)
 
     private val builder = TranslatorOptions.Builder()
     private val translatorStateAsFlow = combine(
         sourceLanguageFlow,
-        targetLanguageFlow
-    ) { sourceLanguage, targetLanguage ->
+        targetLanguageFlow,
+        loadingFlow
+    ) { sourceLanguage, targetLanguage, loading ->
         if (sourceLanguage == null || targetLanguage == null) return@combine null
         else {
             val sourceLanguageCode =
@@ -52,9 +54,7 @@ class HomeViewModel @Inject constructor(
     @OptIn(FlowPreview::class)
     val uiState = originalTextAsFlow
         .debounce(700.milliseconds)
-        .combine(
-            translatorStateAsFlow,
-        ) { originalText, translatorState ->
+        .combine(translatorStateAsFlow) { originalText, translatorState ->
             if (translatorState == null) return@combine HomeScreenState.default()
             else {
                 val translator = translatorState.translator
@@ -65,7 +65,8 @@ class HomeViewModel @Inject constructor(
                     originalText = originalText,
                     translatedText = translatedText,
                     sourceLanguage = translatorState.sourceLanguage,
-                    targetLanguage = translatorState.targetLanguage
+                    targetLanguage = translatorState.targetLanguage,
+                    loading = false
                 )
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), HomeScreenState.default())
@@ -116,6 +117,6 @@ class HomeViewModel @Inject constructor(
     data class TranslatorState(
         val translator: Translator,
         val sourceLanguage: Language,
-        val targetLanguage: Language
+        val targetLanguage: Language,
     )
 }
