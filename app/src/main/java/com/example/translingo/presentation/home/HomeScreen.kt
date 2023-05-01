@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
@@ -51,12 +52,24 @@ fun HomeScreen(
 ) {
     val focusManager = LocalFocusManager.current
     val isTranslationActive = WindowInsets.isImeVisible
+    val (originalText, setOriginalText) = remember { mutableStateOf("") }
+    val clearText: () -> Unit = {
+        setOriginalText("")
+        onEvent(HomeScreenEvent.OnTranslate(""))
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             HomeScreenTopAppBar(
-                isTranslationActive = isTranslationActive
-            ) { focusManager.clearFocus() }
+                isTranslationActive = isTranslationActive,
+                isTranslationEmpty = originalText.isEmpty(),
+                onBackArrowClick = {
+                    clearText()
+                    focusManager.clearFocus()
+                },
+                onClearClick = clearText
+            ) { }
         },
     ) { innerPadding ->
         Column(
@@ -68,23 +81,36 @@ fun HomeScreen(
                 .imePadding()
         ) {
             TranslationBody(
-                homeScreenState = homeScreenState,
-                onEvent = onEvent,
+                originalText = originalText,
+                translatedText = homeScreenState.translatedText,
                 modifier = Modifier
-                    .weight(0.7f)
+                    .then(
+                        if (isTranslationActive) Modifier.weight(0.7f)
+                        else Modifier.weight(1f)
+                    )
                     .background(
                         color = White,
                         shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
-                    )
-            )
+                    ),
+            ) {
+                setOriginalText(it)
+                onEvent(HomeScreenEvent.OnTranslate(it))
+            }
 
-            Spacer(modifier = Modifier.height(24.dp))
-            LanguageButtons(
-                modifier = Modifier.fillMaxWidth(),
-                homeScreenState = homeScreenState,
-                onEvent = onEvent,
-                onNavigate = onNavigate
-            )
+            Column(
+                modifier = Modifier.then(
+                    if (isTranslationActive) Modifier
+                    else Modifier.weight(0.3f)
+                )
+            ) {
+                Spacer(modifier = Modifier.height(24.dp))
+                LanguageButtons(
+                    modifier = Modifier.fillMaxWidth(),
+                    homeScreenState = homeScreenState,
+                    onEvent = onEvent,
+                    onNavigate = onNavigate
+                )
+            }
         }
     }
 
@@ -176,13 +202,25 @@ fun LanguageButton(
 }
 
 @Composable
-fun HomeScreenTopAppBar(isTranslationActive: Boolean, onBackArrowClick: () -> Unit) {
+fun HomeScreenTopAppBar(
+    isTranslationActive: Boolean,
+    isTranslationEmpty: Boolean,
+    onBackArrowClick: () -> Unit,
+    onClearClick: () -> Unit,
+    onHistoryClick: () -> Unit
+) {
     AnimatedContent(
         targetState = isTranslationActive,
         transitionSpec = { fadeIn(tween(300)) with fadeOut(tween(500)) }
     ) { isTranslationActiveState ->
-        if (isTranslationActiveState) ActiveTopAppBar(onBackArrowClick = onBackArrowClick)
-        else DefaultTopAppBar()
+        if (isTranslationActiveState) {
+            ActiveTopAppBar(
+                isTranslationEmpty = isTranslationEmpty,
+                onBackArrowClick = onBackArrowClick,
+                onClearClick = onClearClick,
+                onHistoryClick = onHistoryClick
+            )
+        } else DefaultTopAppBar()
     }
 }
 
@@ -204,7 +242,12 @@ fun DefaultTopAppBar() {
 }
 
 @Composable
-fun ActiveTopAppBar(onBackArrowClick: () -> Unit) {
+fun ActiveTopAppBar(
+    isTranslationEmpty: Boolean,
+    onBackArrowClick: () -> Unit,
+    onClearClick: () -> Unit,
+    onHistoryClick: () -> Unit
+) {
     TopAppBar(
         title = { },
         navigationIcon = {
@@ -214,7 +257,13 @@ fun ActiveTopAppBar(onBackArrowClick: () -> Unit) {
             )
         },
         actions = {
-            TopAppBarIcon(imageVector = Icons.Default.History) { }
+            if (isTranslationEmpty) {
+                TopAppBarIcon(
+                    imageVector = Icons.Default.History,
+                    onClick = onHistoryClick
+                )
+            } else TopAppBarIcon(imageVector = Icons.Default.Close, onClick = onClearClick)
+
             TopAppBarIcon(imageVector = Icons.Default.MoreVert) { }
         },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = White)
@@ -223,18 +272,15 @@ fun ActiveTopAppBar(onBackArrowClick: () -> Unit) {
 
 @Composable
 fun TranslationBody(
-    homeScreenState: HomeScreenState,
-    onEvent: (HomeScreenEvent) -> Unit,
-    modifier: Modifier
+    originalText: String,
+    translatedText: String,
+    modifier: Modifier,
+    onTextChange: (String) -> Unit,
 ) {
-    val (originalText, setOriginalText) = remember { mutableStateOf("") }
     Column(modifier = modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp)) {
         BasicTextField(
             value = originalText,
-            onValueChange = {
-                setOriginalText(it)
-                onEvent(HomeScreenEvent.OnTranslate(it))
-            },
+            onValueChange = onTextChange,
             decorationBox = { innerTextField ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.weight(1f)) {
@@ -266,7 +312,7 @@ fun TranslationBody(
 
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = homeScreenState.translatedText,
+            text = translatedText,
             style = MaterialTheme.typography.titleLarge.copy(
                 color = Cerulean,
                 fontWeight = FontWeight.SemiBold

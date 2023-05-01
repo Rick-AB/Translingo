@@ -49,7 +49,8 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private val originalTextAsFlow = MutableStateFlow("")
+    private val _originalTextAsFlow = MutableStateFlow("")
+    val originalTextAsFlow = _originalTextAsFlow.asStateFlow()
 
     @OptIn(FlowPreview::class)
     val uiState = originalTextAsFlow
@@ -76,7 +77,7 @@ class HomeViewModel @Inject constructor(
 
     fun onEvent(event: HomeScreenEvent) {
         when (event) {
-            is HomeScreenEvent.OnTranslate -> originalTextAsFlow.update { event.text }
+            is HomeScreenEvent.OnTranslate -> _originalTextAsFlow.update { event.text }
             is HomeScreenEvent.OnSwapLanguages -> swapLanguages(
                 event.newSourceLanguageCode,
                 event.newTargetLanguageCode
