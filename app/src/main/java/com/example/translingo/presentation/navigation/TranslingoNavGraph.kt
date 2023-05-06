@@ -8,10 +8,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import com.example.translingo.presentation.home.HomeScreen
-import com.example.translingo.presentation.home.HomeScreenEvent
-import com.example.translingo.presentation.home.HomeScreenSideEffect
+import com.example.translingo.presentation.home.HomeEvent
+import com.example.translingo.presentation.home.HomeSideEffect
 import com.example.translingo.presentation.home.HomeViewModel
-import com.example.translingo.presentation.languages.SelectLanguage
+import com.example.translingo.presentation.languages.SelectLanguageScreen
 import com.example.translingo.presentation.languages.SelectLanguageSideEffect
 import com.example.translingo.presentation.languages.SelectLanguageViewModel
 import com.example.translingo.util.observeWithLifecycle
@@ -33,10 +33,10 @@ internal fun TranslingoNavGraph(navController: NavHostController) {
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
             LaunchedEffect(key1 = Unit) {
-                viewModel.onEvent(HomeScreenEvent.OnForeground)
+                viewModel.onEvent(HomeEvent.OnForeground)
                 viewModel.sideEffect.collect {
                     when (it) {
-                        is HomeScreenSideEffect.SelectLanguage -> {
+                        is HomeSideEffect.SelectLanguage -> {
                             delay(500.milliseconds)
                             navController.navigate(Destinations.SelectLanguage(it.languageType))
                         }
@@ -57,7 +57,7 @@ internal fun TranslingoNavGraph(navController: NavHostController) {
                 }
             }
 
-            SelectLanguage(
+            SelectLanguageScreen(
                 uiState = uiState,
                 languageType = this.languageType,
                 onEvent = viewModel::onEvent

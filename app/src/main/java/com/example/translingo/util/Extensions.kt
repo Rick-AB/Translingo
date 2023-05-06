@@ -9,11 +9,19 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.example.translingo.domain.model.Language
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.ReceiveChannel
+import java.util.Locale
 
 val String.Companion.Empty
     inline get() = ""
+
+fun String.toLanguage(): Language? {
+    val locale = Locale(this)
+    val isValidLocale = Locale.getAvailableLocales().contains(locale)
+    return if (isValidLocale) Language(this, locale.displayName)
+    else null
+}
 
 fun Modifier.modifyIf(condition: Boolean, modify: Modifier.() -> Modifier): Modifier {
     return if (condition) modify() else this
@@ -39,14 +47,6 @@ fun Modifier.drawCustomIndicatorLine(
     }
 }
 
-fun Context.showLongToast(errorMessage: String) {
-    Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show()
-}
-
-fun Context.showShortToast(message: String) {
-    Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-}
-
 fun Context.showShortToast(@StringRes stringRes: Int) {
     Toast.makeText(this, getString(stringRes), Toast.LENGTH_SHORT).show()
 }
@@ -55,11 +55,3 @@ fun Context.showLongToast(@StringRes stringRes: Int) {
     Toast.makeText(this, getString(stringRes), Toast.LENGTH_LONG).show()
 }
 
-suspend fun <T> Channel<T>.sendUnique(value: T) {
-    var exists = false
-    for (element in this) {
-        if (element is T) exists = true
-    }
-
-    if (!exists) send(value)
-}

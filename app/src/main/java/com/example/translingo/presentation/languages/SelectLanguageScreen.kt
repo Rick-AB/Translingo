@@ -61,7 +61,7 @@ import com.example.translingo.util.modifyIf
 import com.example.translingo.util.showLongToast
 
 @Composable
-fun SelectLanguage(
+fun SelectLanguageScreen(
     uiState: SelectLanguageUiState?,
     languageType: LanguageType,
     onEvent: (SelectLanguageEvent) -> Unit,

@@ -10,6 +10,9 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.with
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -22,8 +25,10 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -32,9 +37,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.example.translingo.R
 import com.example.translingo.domain.model.Language
+import com.example.translingo.presentation.history.HistoryScreen
 import com.example.translingo.presentation.languages.LanguageType
 import com.example.translingo.presentation.navigation.Destinations
 import com.example.translingo.presentation.ui.components.TopAppBarIcon
@@ -42,12 +49,13 @@ import com.example.translingo.presentation.ui.theme.Cerulean
 import com.example.translingo.presentation.ui.theme.TranslingoTheme
 import com.example.translingo.presentation.ui.theme.White
 import com.kiwi.navigationcompose.typed.Destination
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HomeScreen(
-    homeScreenState: HomeScreenState,
-    onEvent: (HomeScreenEvent) -> Unit,
+    homeUiState: HomeUiState,
+    onEvent: (HomeEvent) -> Unit,
     onNavigate: (Destination) -> Unit
 ) {
     val focusManager = LocalFocusManager.current
@@ -55,8 +63,10 @@ fun HomeScreen(
     val (originalText, setOriginalText) = remember { mutableStateOf("") }
     val clearText: () -> Unit = {
         setOriginalText("")
-        onEvent(HomeScreenEvent.OnTranslate(""))
+        onEvent(HomeEvent.OnTranslate(""))
     }
+
+    var offsetY by remember { mutableStateOf(0f) }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -80,21 +90,31 @@ fun HomeScreen(
                 .navigationBarsPadding()
                 .imePadding()
         ) {
-            TranslationBody(
-                originalText = originalText,
-                translatedText = homeScreenState.translatedText,
+            Surface(
+                color = White,
+                shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp),
                 modifier = Modifier
                     .then(
                         if (isTranslationActive) Modifier.weight(0.7f)
                         else Modifier.weight(1f)
                     )
-                    .background(
-                        color = White,
-                        shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
-                    ),
+                    .offset { IntOffset(0, offsetY.roundToInt()) }
+                    .draggable(
+                        orientation = Orientation.Vertical,
+                        state = rememberDraggableState { delta ->
+                            offsetY += delta
+                        }
+                    )
             ) {
-                setOriginalText(it)
-                onEvent(HomeScreenEvent.OnTranslate(it))
+                HistoryScreen()
+//                TranslationBody(
+//                    originalText = originalText,
+//                    translatedText = homeUiState.translatedText,
+//                    modifier = Modifier
+//                ) {
+//                    setOriginalText(it)
+//                    onEvent(HomeEvent.OnTranslate(it))
+//                }
             }
 
             Column(
@@ -106,7 +126,7 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(24.dp))
                 LanguageButtons(
                     modifier = Modifier.fillMaxWidth(),
-                    homeScreenState = homeScreenState,
+                    homeUiState = homeUiState,
                     onEvent = onEvent,
                     onNavigate = onNavigate
                 )
@@ -119,11 +139,11 @@ fun HomeScreen(
 @Composable
 fun LanguageButtons(
     modifier: Modifier,
-    homeScreenState: HomeScreenState,
-    onEvent: (HomeScreenEvent) -> Unit,
+    homeUiState: HomeUiState,
+    onEvent: (HomeEvent) -> Unit,
     onNavigate: (Destination) -> Unit
 ) {
-    val transition = updateTransition(targetState = homeScreenState, label = "buttonTransition")
+    val transition = updateTransition(targetState = homeUiState, label = "buttonTransition")
 
     Row(
         modifier = modifier,
@@ -144,9 +164,9 @@ fun LanguageButtons(
         Spacer(modifier = Modifier.width(8.dp))
         IconButton(onClick = {
             onEvent(
-                HomeScreenEvent.OnSwapLanguages(
-                    newSourceLanguageCode = homeScreenState.targetLanguage.languageCode,
-                    newTargetLanguageCode = homeScreenState.sourceLanguage.languageCode
+                HomeEvent.OnSwapLanguages(
+                    newSourceLanguageCode = homeUiState.targetLanguage.languageCode,
+                    newTargetLanguageCode = homeUiState.sourceLanguage.languageCode
                 )
             )
         }) {
@@ -171,7 +191,7 @@ fun LanguageButtons(
 fun LanguageButton(
     modifier: Modifier,
     languageType: LanguageType,
-    transition: Transition<HomeScreenState>,
+    transition: Transition<HomeUiState>,
     onClick: () -> Unit,
 ) {
     Button(
@@ -328,7 +348,7 @@ fun HomePrev() {
         val source = Language("en", "English")
         val target = Language("es", "Spanish")
         val state = remember {
-            mutableStateOf(HomeScreenState("HER", "Ella", source, target, false))
+            mutableStateOf(HomeUiState("HER", "Ella", source, target, false))
         }
         HomeScreen(state.value, {}, {})
     }

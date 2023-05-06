@@ -1,6 +1,7 @@
 package com.example.translingo.domain.repository
 
 import com.example.translingo.domain.model.DownloadableLanguage
+import com.example.translingo.domain.model.History
 import com.example.translingo.domain.model.Language
 import kotlinx.coroutines.flow.Flow
 
@@ -19,4 +20,10 @@ interface LanguageRepository {
     suspend fun setSourceLanguage(languageCode: String)
 
     suspend fun setTargetLanguage(languageCode: String)
+
+    suspend fun saveTranslation(history: History)
+
+    suspend fun deleteTranslation(history: History)
+
+    fun getTranslationHistoryByDateDescAsFlow(): Flow<List<History>>
 }
