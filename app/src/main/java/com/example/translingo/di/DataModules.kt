@@ -4,7 +4,9 @@ import android.content.Context
 import androidx.room.Room
 import com.example.translingo.data.UserPreference
 import com.example.translingo.data.database.TranslingoDatabase
+import com.example.translingo.data.repository.HistoryRepositoryImpl
 import com.example.translingo.data.repository.LanguageRepositoryImpl
+import com.example.translingo.domain.repository.HistoryRepository
 import com.example.translingo.domain.repository.LanguageRepository
 import dagger.Module
 import dagger.Provides
@@ -21,9 +23,16 @@ object RepositoryModule {
     @Provides
     fun provideLanguageRepository(
         userPreference: UserPreference,
-        translingoDatabase: TranslingoDatabase
     ): LanguageRepository {
-        return LanguageRepositoryImpl(userPreference, translingoDatabase)
+        return LanguageRepositoryImpl(userPreference)
+    }
+
+    @Singleton
+    @Provides
+    fun provideHistoryRepository(
+        translingoDatabase: TranslingoDatabase
+    ): HistoryRepository {
+        return HistoryRepositoryImpl(translingoDatabase)
     }
 }
 
@@ -38,6 +47,6 @@ object DatabaseModule {
             context.applicationContext,
             TranslingoDatabase::class.java,
             "Translingo.db"
-        ).build()
+        ).fallbackToDestructiveMigration().build()
     }
 }

@@ -11,5 +11,6 @@ data class HistoryEntity(
     val translatedText: String,
     val sourceLanguageCode: String,
     val targetLanguageCode: String,
+    val isFavorite: Boolean,
     val date: String
 )

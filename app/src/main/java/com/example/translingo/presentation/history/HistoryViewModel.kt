@@ -3,7 +3,7 @@ package com.example.translingo.presentation.history
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.translingo.domain.model.History
-import com.example.translingo.domain.repository.LanguageRepository
+import com.example.translingo.domain.repository.HistoryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -17,11 +17,11 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
-    private val languageRepository: LanguageRepository
+    private val historyRepo: HistoryRepository
 ) : ViewModel() {
 
     val uiState: StateFlow<HistoryUiState> =
-        languageRepository.getTranslationHistoryByDateDescAsFlow()
+        historyRepo.getTranslationHistoryByDateDescAsFlow()
             .map {
                 val groupedHistoryItems = produceGroupedHistoryByFormattedDate(it)
                 HistoryUiState(groupedHistoryItems)
@@ -36,14 +36,16 @@ class HistoryViewModel @Inject constructor(
     fun onEvent(event: HistoryEvent) {
         when (event) {
             is HistoryEvent.OnDeleteHistory -> deleteHistory(event.history)
-            is HistoryEvent.OnFavorite -> TODO()
+            is HistoryEvent.OnFavorite -> addOrRemoveFavorite(event.historyId)
         }
     }
 
+    private fun addOrRemoveFavorite(historyId: Int) {
+        viewModelScope.launch { historyRepo.addOrRemoveFavorite(historyId) }
+    }
+
     private fun deleteHistory(history: History) {
-        viewModelScope.launch {
-            languageRepository.deleteTranslation(history)
-        }
+        viewModelScope.launch { historyRepo.deleteTranslation(history) }
     }
 
 

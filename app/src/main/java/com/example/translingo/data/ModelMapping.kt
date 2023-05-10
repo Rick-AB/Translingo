@@ -10,6 +10,7 @@ fun History.toEntity() = HistoryEntity(
     translatedText = translatedText,
     sourceLanguageCode = sourceLanguage?.languageCode!!,
     targetLanguageCode = targetLanguage?.languageCode!!,
+    isFavorite = isFavorite,
     date = date
 )
 
@@ -20,6 +21,7 @@ fun HistoryEntity.toDomain(): History {
         translatedText,
         sourceLanguageCode.toLanguage(),
         targetLanguageCode.toLanguage(),
+        isFavorite,
         date
     )
 }

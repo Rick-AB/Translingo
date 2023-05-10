@@ -6,5 +6,6 @@ data class History(
     val translatedText: String,
     val sourceLanguage: Language?,
     val targetLanguage: Language?,
+    val isFavorite: Boolean,
     val date: String
 )

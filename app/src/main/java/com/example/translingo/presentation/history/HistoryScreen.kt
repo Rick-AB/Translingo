@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -106,7 +107,9 @@ fun HistoryScreen(uiState: HistoryUiState, onEvent: (HistoryEvent) -> Unit) {
                             shape = RoundedCornerShape(8.dp),
                             elevation = CardDefaults.cardElevation(elevation)
                         ) {
-                            HistoryItem(historyItem = item.history)
+                            HistoryItem(historyItem = item.history) {
+                                onEvent(HistoryEvent.OnFavorite(item.history.id))
+                            }
                         }
                     }
                 }
@@ -117,7 +120,12 @@ fun HistoryScreen(uiState: HistoryUiState, onEvent: (HistoryEvent) -> Unit) {
 }
 
 @Composable
-fun HistoryItem(modifier: Modifier = Modifier, historyItem: History) {
+fun HistoryItem(
+    modifier: Modifier = Modifier,
+    historyItem: History,
+    onFavoriteIconClick: () -> Unit
+) {
+//    BottomSheetScaffold(sheetContent = ) { }
     Row(
         modifier = modifier
             .clickable { }
@@ -135,8 +143,14 @@ fun HistoryItem(modifier: Modifier = Modifier, historyItem: History) {
         }
 
         Spacer(modifier = Modifier.width(16.dp))
-        IconButton(onClick = { /*TODO*/ }) {
-            Icon(imageVector = Icons.Outlined.StarBorder, contentDescription = "")
+        IconButton(onClick = onFavoriteIconClick) {
+            if (historyItem.isFavorite) {
+                Icon(
+                    imageVector = Icons.Outlined.Star,
+                    contentDescription = "",
+                    tint = Cerulean
+                )
+            } else Icon(imageVector = Icons.Outlined.StarBorder, contentDescription = "")
         }
     }
 }
@@ -159,7 +173,7 @@ fun HistoryPrev() {
     MaterialTheme {
         val dummy = (1..10).map {
             HistoryItem.Item(
-                History(it, "I am him", "Yo soy el", null, null, "2023-05-05")
+                History(it, "I am him", "Yo soy el", null, null, isFavorite = true, "2023-05-05")
             )
         }
         val state = HistoryUiState(dummy)

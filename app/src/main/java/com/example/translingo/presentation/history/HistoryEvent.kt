@@ -4,5 +4,5 @@ import com.example.translingo.domain.model.History
 
 sealed interface HistoryEvent {
     data class OnDeleteHistory(val history: History) : HistoryEvent
-    data class OnFavorite(val history: History) : HistoryEvent
+    data class OnFavorite(val historyId: Int) : HistoryEvent
 }

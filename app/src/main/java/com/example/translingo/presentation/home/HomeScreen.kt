@@ -2,6 +2,7 @@ package com.example.translingo.presentation.home
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Transition
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.fadeIn
@@ -10,9 +11,6 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.with
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -25,6 +23,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,13 +31,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.constraintlayout.compose.Dimension
 import com.example.translingo.R
 import com.example.translingo.domain.model.Language
 import com.example.translingo.presentation.history.HistoryScreen
@@ -49,7 +52,8 @@ import com.example.translingo.presentation.ui.theme.Cerulean
 import com.example.translingo.presentation.ui.theme.TranslingoTheme
 import com.example.translingo.presentation.ui.theme.White
 import com.kiwi.navigationcompose.typed.Destination
-import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
+import timber.log.Timber
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -82,58 +86,93 @@ fun HomeScreen(
             ) { }
         },
     ) { innerPadding ->
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.primary)
                 .padding(top = innerPadding.calculateTopPadding())
-                .navigationBarsPadding()
-                .imePadding()
-        ) {
-            Surface(
-                color = White,
-                shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp),
-                modifier = Modifier
-                    .then(
-                        if (isTranslationActive) Modifier.weight(0.7f)
-                        else Modifier.weight(1f)
-                    )
-                    .offset { IntOffset(0, offsetY.roundToInt()) }
-                    .draggable(
-                        orientation = Orientation.Vertical,
-                        state = rememberDraggableState { delta ->
-                            offsetY += delta
-                        }
-                    )
-            ) {
-                HistoryScreen()
-//                TranslationBody(
-//                    originalText = originalText,
-//                    translatedText = homeUiState.translatedText,
-//                    modifier = Modifier
-//                ) {
-//                    setOriginalText(it)
-//                    onEvent(HomeEvent.OnTranslate(it))
-//                }
-            }
 
-            Column(
-                modifier = Modifier.then(
-                    if (isTranslationActive) Modifier
-                    else Modifier.weight(0.3f)
-                )
+        ) {
+
+            val height = remember(isTranslationActive) {
+                if (isTranslationActive) maxHeight.times(0.6f)
+                else maxHeight.times(0.7f)
+            }
+            val animatedHeight by animateDpAsState(targetValue = height, animationSpec = tween(150))
+
+            ConstraintLayout(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .navigationBarsPadding()
+                    .imePadding()
             ) {
-                Spacer(modifier = Modifier.height(24.dp))
+                val (surface, languageButtons, anchor1, anchor2) = createRefs()
+                val barrier = createTopBarrier(anchor1, anchor2)
+                val guideLine = createGuidelineFromTop(0.8f)
+                Surface(
+                    color = White,
+                    shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp),
+                    modifier = Modifier.constrainAs(surface) {
+                        top.linkTo(parent.top)
+                        bottom.linkTo(languageButtons.top, 16.dp)
+                        start.linkTo(parent.start)
+                        end.linkTo(parent.end)
+                        this.height = Dimension.fillToConstraints
+                    }
+                ) {
+//                    HistoryScreen()
+                    TranslationBody(
+                        originalText = originalText,
+                        translatedText = homeUiState.translatedText,
+                        modifier = Modifier
+                    ) {
+                        setOriginalText(it)
+                        onEvent(HomeEvent.OnTranslate(it))
+                    }
+                }
+
                 LanguageButtons(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.constrainAs(languageButtons) {
+                        start.linkTo(parent.start)
+                        end.linkTo(parent.end)
+                        bottom.linkTo(barrier)
+                    },
                     homeUiState = homeUiState,
                     onEvent = onEvent,
                     onNavigate = onNavigate
                 )
+
+                Box(modifier = Modifier.constrainAs(anchor2) {
+                    bottom.linkTo(parent.bottom)
+                    start.linkTo(parent.start)
+                    end.linkTo(parent.end)
+                    width = Dimension.fillToConstraints
+                    this.height = Dimension.value(1.dp)
+                })
+
+                if (!isTranslationActive) {
+                    Box(modifier = Modifier
+                        .constrainAs(anchor1) {
+                            bottom.linkTo(parent.bottom)
+                            start.linkTo(parent.start)
+                            end.linkTo(parent.end)
+                            top.linkTo(guideLine)
+                            this.height = Dimension.fillToConstraints
+                            width = Dimension.fillToConstraints
+                        }
+                    )
+                }
             }
         }
     }
 
+}
+
+@Composable
+fun Homebody() {
+    ConstraintLayout() {
+
+    }
 }
 
 @Composable

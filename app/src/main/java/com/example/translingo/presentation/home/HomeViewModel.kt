@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.translingo.domain.model.History
 import com.example.translingo.domain.model.Language
+import com.example.translingo.domain.repository.HistoryRepository
 import com.example.translingo.domain.repository.LanguageRepository
 import com.example.translingo.presentation.languages.LanguageType
 import com.google.mlkit.nl.translate.TranslateLanguage
@@ -23,7 +24,8 @@ import kotlin.time.Duration.Companion.milliseconds
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val languageRepository: LanguageRepository
+    private val languageRepository: LanguageRepository,
+    private val historyRepository: HistoryRepository
 ) : ViewModel() {
     private val sourceLanguageFlow = languageRepository.getSourceLanguageAsFlow()
     private val targetLanguageFlow = languageRepository.getTargetLanguageAsFlow()
@@ -122,7 +124,7 @@ class HomeViewModel @Inject constructor(
 
         if (history.originalText.isNotEmpty() && history.originalText.isNotBlank()) {
             viewModelScope.launch {
-                languageRepository.saveTranslation(history)
+                historyRepository.saveTranslation(history)
             }
         }
     }
@@ -142,6 +144,7 @@ class HomeViewModel @Inject constructor(
             translatedText = translatedText,
             sourceLanguage = state.sourceLanguage,
             targetLanguage = state.targetLanguage,
+            isFavorite = false,
             date = LocalDate.now().toString()
         )
     }

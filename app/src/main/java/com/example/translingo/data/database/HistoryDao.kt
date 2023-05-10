@@ -18,4 +18,7 @@ interface HistoryDao {
 
     @Query("SELECT * FROM HistoryEntity ORDER BY date DESC")
     fun getHistoryByDateDesc(): Flow<List<HistoryEntity>>
+
+    @Query("SELECT * FROM HistoryEntity WHERE id=:id")
+    suspend fun getHistoryById(id: Int): HistoryEntity?
 }

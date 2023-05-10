@@ -17,10 +17,8 @@ import java.util.Locale
 import javax.inject.Inject
 
 class LanguageRepositoryImpl @Inject constructor(
-    private val userPreference: UserPreference,
-    database: TranslingoDatabase
+    private val userPreference: UserPreference
 ) : LanguageRepository {
-    private val historyDao = database.historyDao()
     override fun getDownloadableLanguages(): List<DownloadableLanguage> {
         return TranslateLanguage.getAllLanguages().map { languageCode ->
             val displayName = Locale(languageCode).displayName
@@ -56,18 +54,6 @@ class LanguageRepositoryImpl @Inject constructor(
 
     override suspend fun setTargetLanguage(languageCode: String) =
         userPreference.setTargetLanguage(languageCode)
-
-    override suspend fun saveTranslation(history: History) {
-        historyDao.insertHistory(history.toEntity())
-    }
-
-    override suspend fun deleteTranslation(history: History) {
-        historyDao.deleteHistory(history.toEntity())
-    }
-
-    override fun getTranslationHistoryByDateDescAsFlow(): Flow<List<History>> {
-        return historyDao.getHistoryByDateDesc().map { list -> list.map(HistoryEntity::toDomain) }
-    }
 
     private fun getLanguageFromCode(languageCode: String): Language? {
         val locale = Locale(languageCode)

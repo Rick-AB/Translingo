@@ -20,10 +20,4 @@ interface LanguageRepository {
     suspend fun setSourceLanguage(languageCode: String)
 
     suspend fun setTargetLanguage(languageCode: String)
-
-    suspend fun saveTranslation(history: History)
-
-    suspend fun deleteTranslation(history: History)
-
-    fun getTranslationHistoryByDateDescAsFlow(): Flow<List<History>>
 }
