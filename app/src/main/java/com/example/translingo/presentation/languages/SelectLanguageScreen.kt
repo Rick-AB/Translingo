@@ -32,11 +32,12 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -53,6 +54,7 @@ import com.example.translingo.presentation.ui.components.TopBarTitle
 import com.example.translingo.presentation.ui.theme.Cerulean
 import com.example.translingo.presentation.ui.theme.ColombiaBlue
 import com.example.translingo.presentation.ui.theme.White
+import com.example.translingo.util.Empty
 import com.example.translingo.util.modifyIf
 import com.example.translingo.util.showLongToast
 
@@ -68,15 +70,11 @@ fun SelectLanguageScreen(
     val title = if (languageType == LanguageType.SOURCE) R.string.translate_from
     else R.string.translate_to
 
-    val (searchActive, setSearchActive) = remember { mutableStateOf(false) }
-    val (searchQuery, setSearchQuery) = remember { mutableStateOf("") }
-
-    val onSearchChange: (String) -> Unit = {
-        setSearchQuery(it)
-        onEvent(SelectLanguageEvent.OnSearchQueryChange(it))
-    }
+    var searchActive by remember { mutableStateOf(false) }
 
     val actionGoBack: () -> Unit = {
+        if (searchActive) searchActive = false
+
         val shouldShowToast =
             uiState?.savedSourceLanguage == null || uiState.savedTargetLanguage == null
         if (shouldShowToast) context.showLongToast(R.string.please_select_language)
@@ -89,7 +87,7 @@ fun SelectLanguageScreen(
     }
 
     BackHandler {
-        if (searchActive) setSearchActive(false)
+        if (searchActive) searchActive = false
         else actionGoBack()
     }
 
@@ -104,10 +102,13 @@ fun SelectLanguageScreen(
             SelectLanguageTopAppBar(
                 titleRes = title,
                 searchActive = searchActive,
-                searchQuery = searchQuery,
+                searchQuery = uiState?.searchQuery ?: String.Empty,
                 scrollBehavior = scrollBehavior,
-                onSearchActiveChange = setSearchActive,
-                onSearchChange = onSearchChange,
+                onSearchIconClick = {
+                    scrollBehavior.state.heightOffset = -200f//workaround to collapse LargeTopAppbar
+                    searchActive = true
+                },
+                onSearchChange = { onEvent(SelectLanguageEvent.OnSearchQueryChange(it)) },
                 onNavigationIconClick = actionGoBack
             )
         }) {
@@ -157,7 +158,7 @@ private fun SelectLanguageTopAppBar(
     searchActive: Boolean,
     searchQuery: String,
     scrollBehavior: TopAppBarScrollBehavior,
-    onSearchActiveChange: (Boolean) -> Unit,
+    onSearchIconClick: () -> Unit,
     onSearchChange: (String) -> Unit,
     onNavigationIconClick: () -> Unit
 ) {
@@ -179,9 +180,7 @@ private fun SelectLanguageTopAppBar(
         },
         actions = {
             if (!searchActive) {
-                TopAppBarIcon(imageVector = Icons.Default.Search) {
-                    onSearchActiveChange(true)
-                }
+                TopAppBarIcon(imageVector = Icons.Default.Search, onClick = onSearchIconClick)
             }
         },
         scrollBehavior = scrollBehavior,

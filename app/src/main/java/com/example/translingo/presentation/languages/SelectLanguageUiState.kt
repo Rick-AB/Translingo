@@ -4,6 +4,7 @@ import com.example.translingo.domain.model.DownloadableLanguage
 import com.example.translingo.domain.model.Language
 
 data class SelectLanguageUiState(
+    val searchQuery: String,
     val languages: List<DownloadableLanguage>,
     val savedSourceLanguage: Language?,
     val savedTargetLanguage: Language?,

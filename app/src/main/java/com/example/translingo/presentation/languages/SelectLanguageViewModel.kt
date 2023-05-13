@@ -36,6 +36,7 @@ class SelectLanguageViewModel @Inject constructor(
         else allLanguages
 
         SelectLanguageUiState(
+            searchQuery = searchQuery,
             languages = filteredLanguages,
             savedSourceLanguage = savedSourceLanguage,
             savedTargetLanguage = savedTargetLanguage,

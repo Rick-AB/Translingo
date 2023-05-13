@@ -1,5 +1,6 @@
 package com.example.translingo.presentation.favorite
 
+import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,9 +54,14 @@ fun FavoriteScreen(
 ) {
     val scrollBehavior =
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
-    scrollBehavior.state.heightOffset
 
     var searchActive by remember { mutableStateOf(false) }
+
+    BackHandler {
+        if (searchActive) searchActive = false
+        else goBack()
+    }
+
     Scaffold(
         topBar = {
             FavoriteTopAppBar(
@@ -64,9 +70,12 @@ fun FavoriteScreen(
                 canSearch = !uiState.isEmpty,
                 searchQuery = uiState.searchQuery,
                 scrollBehavior = scrollBehavior,
-                onSearchActiveChange = { searchActive = it },
+                onSearchIconClick = {
+                    scrollBehavior.state.heightOffset = -200f//workaround to collapse LargeTopAppbar
+                    searchActive = true
+                },
                 onSearchChange = { onEvent(FavoriteEvent.OnSearchQueryChange(it)) },
-                onNavigationIconClick = goBack
+                onNavIconClick = { if (searchActive) searchActive = false; else goBack() }
             )
         },
         containerColor = White,
@@ -130,9 +139,9 @@ fun FavoriteTopAppBar(
     canSearch: Boolean,
     searchQuery: String,
     scrollBehavior: TopAppBarScrollBehavior,
-    onSearchActiveChange: (Boolean) -> Unit,
+    onSearchIconClick: () -> Unit,
     onSearchChange: (String) -> Unit,
-    onNavigationIconClick: () -> Unit
+    onNavIconClick: () -> Unit
 ) {
     LargeTopAppBar(
         title = {
@@ -147,13 +156,11 @@ fun FavoriteTopAppBar(
             }
         },
         navigationIcon = {
-            TopAppBarIcon(imageVector = Icons.Default.ArrowBack, onClick = onNavigationIconClick)
+            TopAppBarIcon(imageVector = Icons.Default.ArrowBack, onClick = onNavIconClick)
         },
         actions = {
             if (!searchActive && canSearch) {
-                TopAppBarIcon(imageVector = Icons.Default.Search) {
-                    onSearchActiveChange(true)
-                }
+                TopAppBarIcon(imageVector = Icons.Default.Search, onClick = onSearchIconClick)
             }
         },
         scrollBehavior = scrollBehavior,
