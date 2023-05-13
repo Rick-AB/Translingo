@@ -27,14 +27,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -44,46 +40,64 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import com.example.translingo.R
 import com.example.translingo.domain.model.Language
+import com.example.translingo.domain.model.Translation
 import com.example.translingo.presentation.history.HistoryScreen
 import com.example.translingo.presentation.languages.LanguageType
-import com.example.translingo.presentation.navigation.Destinations
+import com.example.translingo.presentation.navigation.TranslingoDestinations
 import com.example.translingo.presentation.ui.components.TopAppBarIcon
 import com.example.translingo.presentation.ui.theme.Cerulean
 import com.example.translingo.presentation.ui.theme.TranslingoTheme
 import com.example.translingo.presentation.ui.theme.White
+import com.example.translingo.util.observeWithLifecycle
 import com.kiwi.navigationcompose.typed.Destination
 import kotlinx.coroutines.delay
-import timber.log.Timber
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HomeScreen(
     homeUiState: HomeUiState,
+    translationArg: Translation?,
+    homeSideEffect: Flow<HomeSideEffect>,
     onEvent: (HomeEvent) -> Unit,
     onNavigate: (Destination) -> Unit
 ) {
     val focusManager = LocalFocusManager.current
     val isTranslationActive = WindowInsets.isImeVisible
-    val (originalText, setOriginalText) = remember { mutableStateOf("") }
-    val clearText: () -> Unit = {
-        setOriginalText("")
-        onEvent(HomeEvent.OnTranslate(""))
+    val clearText: () -> Unit = { onEvent(HomeEvent.OnTranslate("")) }
+
+    LaunchedEffect(key1 = Unit) {
+        if (translationArg != null) {
+            onEvent(HomeEvent.OnTranslate(translationArg.originalText))
+        }
+        onEvent(HomeEvent.OnForeground)
     }
 
-    var offsetY by remember { mutableStateOf(0f) }
+    homeSideEffect.observeWithLifecycle {
+        when (it) {
+            is HomeSideEffect.SelectLanguage -> {
+                delay(500.milliseconds)
+                onNavigate(TranslingoDestinations.SelectLanguage(it.languageType))
+            }
+        }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             HomeScreenTopAppBar(
                 isTranslationActive = isTranslationActive,
-                isTranslationEmpty = originalText.isEmpty(),
+                isTranslationEmpty = homeUiState.originalText.isEmpty(),
                 onBackArrowClick = {
                     clearText()
                     focusManager.clearFocus()
                 },
-                onClearClick = clearText
-            ) { }
+                onClearIconClick = clearText,
+                onHistoryIconClick = {},
+                onFavoriteIconClick = { onNavigate(TranslingoDestinations.Favorite) }
+            )
         },
     ) { innerPadding ->
         BoxWithConstraints(
@@ -122,13 +136,10 @@ fun HomeScreen(
                 ) {
 //                    HistoryScreen()
                     TranslationBody(
-                        originalText = originalText,
+                        originalText = homeUiState.originalText,
                         translatedText = homeUiState.translatedText,
                         modifier = Modifier
-                    ) {
-                        setOriginalText(it)
-                        onEvent(HomeEvent.OnTranslate(it))
-                    }
+                    ) { onEvent(HomeEvent.OnTranslate(it)) }
                 }
 
                 LanguageButtons(
@@ -169,13 +180,6 @@ fun HomeScreen(
 }
 
 @Composable
-fun Homebody() {
-    ConstraintLayout() {
-
-    }
-}
-
-@Composable
 fun LanguageButtons(
     modifier: Modifier,
     homeUiState: HomeUiState,
@@ -197,7 +201,7 @@ fun LanguageButtons(
             languageType = LanguageType.SOURCE,
             transition = transition
         ) {
-            onNavigate(Destinations.SelectLanguage(LanguageType.SOURCE))
+            onNavigate(TranslingoDestinations.SelectLanguage(LanguageType.SOURCE))
         }
 
         Spacer(modifier = Modifier.width(8.dp))
@@ -221,7 +225,7 @@ fun LanguageButtons(
             languageType = LanguageType.TARGET,
             transition,
         ) {
-            onNavigate(Destinations.SelectLanguage(LanguageType.TARGET))
+            onNavigate(TranslingoDestinations.SelectLanguage(LanguageType.TARGET))
         }
     }
 }
@@ -265,8 +269,9 @@ fun HomeScreenTopAppBar(
     isTranslationActive: Boolean,
     isTranslationEmpty: Boolean,
     onBackArrowClick: () -> Unit,
-    onClearClick: () -> Unit,
-    onHistoryClick: () -> Unit
+    onClearIconClick: () -> Unit,
+    onHistoryIconClick: () -> Unit,
+    onFavoriteIconClick: () -> Unit
 ) {
     AnimatedContent(
         targetState = isTranslationActive,
@@ -276,15 +281,15 @@ fun HomeScreenTopAppBar(
             ActiveTopAppBar(
                 isTranslationEmpty = isTranslationEmpty,
                 onBackArrowClick = onBackArrowClick,
-                onClearClick = onClearClick,
-                onHistoryClick = onHistoryClick
+                onClearClick = onClearIconClick,
+                onHistoryClick = onHistoryIconClick
             )
-        } else DefaultTopAppBar()
+        } else DefaultTopAppBar(onFavoriteIconClick)
     }
 }
 
 @Composable
-fun DefaultTopAppBar() {
+fun DefaultTopAppBar(onFavoriteIconClick: () -> Unit) {
     CenterAlignedTopAppBar(
         title = {
             Text(
@@ -295,7 +300,12 @@ fun DefaultTopAppBar() {
                 )
             )
         },
-        navigationIcon = { TopAppBarIcon(imageVector = Icons.Default.Star) { } },
+        navigationIcon = {
+            TopAppBarIcon(
+                imageVector = Icons.Default.Star,
+                onClick = onFavoriteIconClick
+            )
+        },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = White)
     )
 }
@@ -389,6 +399,6 @@ fun HomePrev() {
         val state = remember {
             mutableStateOf(HomeUiState("HER", "Ella", source, target, false))
         }
-        HomeScreen(state.value, {}, {})
+        HomeScreen(state.value, null, emptyFlow(), {}, {})
     }
 }

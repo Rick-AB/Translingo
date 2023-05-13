@@ -2,8 +2,8 @@ package com.example.translingo.presentation.history
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.translingo.domain.model.History
-import com.example.translingo.domain.repository.HistoryRepository
+import com.example.translingo.domain.model.Translation
+import com.example.translingo.domain.repository.TranslationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -17,11 +17,11 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
-    private val historyRepo: HistoryRepository
+    private val translationRepository: TranslationRepository
 ) : ViewModel() {
 
     val uiState: StateFlow<HistoryUiState> =
-        historyRepo.getTranslationHistoryByDateDescAsFlow()
+        translationRepository.getTranslationHistoryByDateDescAsFlow()
             .map {
                 val groupedHistoryItems = produceGroupedHistoryByFormattedDate(it)
                 HistoryUiState(groupedHistoryItems)
@@ -35,22 +35,22 @@ class HistoryViewModel @Inject constructor(
 
     fun onEvent(event: HistoryEvent) {
         when (event) {
-            is HistoryEvent.OnDeleteHistory -> deleteHistory(event.history)
-            is HistoryEvent.OnFavorite -> addOrRemoveFavorite(event.historyId)
+            is HistoryEvent.OnDeleteHistory -> deleteHistory(event.translation)
+            is HistoryEvent.OnToggleFavorite -> toggleFavorite(event.historyId)
         }
     }
 
-    private fun addOrRemoveFavorite(historyId: Int) {
-        viewModelScope.launch { historyRepo.addOrRemoveFavorite(historyId) }
+    private fun toggleFavorite(translationId: Int) {
+        viewModelScope.launch { translationRepository.toggleFavorite(translationId) }
     }
 
-    private fun deleteHistory(history: History) {
-        viewModelScope.launch { historyRepo.deleteTranslation(history) }
+    private fun deleteHistory(translation: Translation) {
+        viewModelScope.launch { translationRepository.deleteTranslation(translation) }
     }
 
 
-    private fun produceGroupedHistoryByFormattedDate(historyItems: List<History>): List<HistoryItem> {
-        return historyItems.groupBy(History::date).mapKeys { entry ->
+    private fun produceGroupedHistoryByFormattedDate(translationItems: List<Translation>): List<HistoryItem> {
+        return translationItems.groupBy(Translation::date).mapKeys { entry ->
             parseLocalDateToDisplayFormat(entry.key)
         }.flatMap { (key, values) ->
             val headerList = listOf(HistoryItem.Header(key))

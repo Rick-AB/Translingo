@@ -2,7 +2,6 @@ package com.example.translingo.presentation.languages
 
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -22,7 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,8 +28,6 @@ import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
@@ -52,17 +48,18 @@ import com.example.translingo.domain.model.DownloadableLanguage
 import com.example.translingo.domain.model.Language
 import com.example.translingo.presentation.ui.components.LoadingDialog
 import com.example.translingo.presentation.ui.components.TopAppBarIcon
+import com.example.translingo.presentation.ui.components.TopAppBarSearch
 import com.example.translingo.presentation.ui.components.TopBarTitle
 import com.example.translingo.presentation.ui.theme.Cerulean
 import com.example.translingo.presentation.ui.theme.ColombiaBlue
 import com.example.translingo.presentation.ui.theme.White
-import com.example.translingo.util.drawCustomIndicatorLine
 import com.example.translingo.util.modifyIf
 import com.example.translingo.util.showLongToast
 
 @Composable
 fun SelectLanguageScreen(
     uiState: SelectLanguageUiState?,
+    sideEffect: SelectLanguageSideEffect?,
     languageType: LanguageType,
     onEvent: (SelectLanguageEvent) -> Unit,
     goBack: () -> Unit
@@ -84,6 +81,11 @@ fun SelectLanguageScreen(
             uiState?.savedSourceLanguage == null || uiState.savedTargetLanguage == null
         if (shouldShowToast) context.showLongToast(R.string.please_select_language)
         else goBack()
+    }
+
+    when (sideEffect) {
+        SelectLanguageSideEffect.OnLanguageSelected -> goBack()
+        null -> {}
     }
 
     BackHandler {
@@ -148,6 +150,7 @@ fun SelectLanguageScreen(
         }
     }
 }
+
 @Composable
 private fun SelectLanguageTopAppBar(
     @StringRes titleRes: Int,
@@ -184,52 +187,6 @@ private fun SelectLanguageTopAppBar(
         scrollBehavior = scrollBehavior,
         colors = TopAppBarDefaults.topAppBarColors(containerColor = White)
     )
-}
-
-@Composable
-fun TopAppBarSearch(
-    modifier: Modifier,
-    searchQuery: String,
-    @StringRes titleRes: Int,
-    onSearchChange: (String) -> Unit
-) {
-    TextField(
-        value = searchQuery,
-        onValueChange = onSearchChange,
-        modifier = modifier.drawCustomIndicatorLine(BorderStroke(0.5.dp, Color.LightGray)),
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = Color.Transparent,
-            unfocusedContainerColor = Color.Transparent,
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent,
-            cursorColor = Color.Blue
-        ),
-        singleLine = true,
-        textStyle = MaterialTheme.typography.bodyLarge,
-        placeholder = { TopAppBarPlaceholder(titleRes = titleRes) },
-        trailingIcon = {
-            if (searchQuery.isNotEmpty()) TopAppBarIcon(imageVector = Icons.Default.Close) {
-                onSearchChange("")
-            }
-        },
-    )
-}
-
-@Composable
-fun TopAppBarPlaceholder(@StringRes titleRes: Int) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            imageVector = Icons.Default.Search,
-            contentDescription = null,
-            tint = Color.LightGray
-        )
-
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = stringResource(id = titleRes).plus("..."),
-            style = MaterialTheme.typography.bodyMedium.copy(Color.LightGray)
-        )
-    }
 }
 
 @Composable

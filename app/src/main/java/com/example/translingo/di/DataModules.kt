@@ -4,9 +4,9 @@ import android.content.Context
 import androidx.room.Room
 import com.example.translingo.data.UserPreference
 import com.example.translingo.data.database.TranslingoDatabase
-import com.example.translingo.data.repository.HistoryRepositoryImpl
+import com.example.translingo.data.repository.TranslationRepositoryImpl
 import com.example.translingo.data.repository.LanguageRepositoryImpl
-import com.example.translingo.domain.repository.HistoryRepository
+import com.example.translingo.domain.repository.TranslationRepository
 import com.example.translingo.domain.repository.LanguageRepository
 import dagger.Module
 import dagger.Provides
@@ -31,8 +31,8 @@ object RepositoryModule {
     @Provides
     fun provideHistoryRepository(
         translingoDatabase: TranslingoDatabase
-    ): HistoryRepository {
-        return HistoryRepositoryImpl(translingoDatabase)
+    ): TranslationRepository {
+        return TranslationRepositoryImpl(translingoDatabase)
     }
 }
 

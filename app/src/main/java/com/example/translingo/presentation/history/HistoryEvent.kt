@@ -1,8 +1,8 @@
 package com.example.translingo.presentation.history
 
-import com.example.translingo.domain.model.History
+import com.example.translingo.domain.model.Translation
 
 sealed interface HistoryEvent {
-    data class OnDeleteHistory(val history: History) : HistoryEvent
-    data class OnFavorite(val historyId: Int) : HistoryEvent
+    data class OnDeleteHistory(val translation: Translation) : HistoryEvent
+    data class OnToggleFavorite(val historyId: Int) : HistoryEvent
 }

@@ -1,12 +1,7 @@
 package com.example.translingo.data.repository
 
 import com.example.translingo.data.UserPreference
-import com.example.translingo.data.database.TranslingoDatabase
-import com.example.translingo.data.database.entities.HistoryEntity
-import com.example.translingo.data.toDomain
-import com.example.translingo.data.toEntity
 import com.example.translingo.domain.model.DownloadableLanguage
-import com.example.translingo.domain.model.History
 import com.example.translingo.domain.model.Language
 import com.example.translingo.domain.repository.LanguageRepository
 import com.google.mlkit.nl.translate.TranslateLanguage

@@ -2,12 +2,14 @@ package com.example.translingo.presentation.languages
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.translingo.domain.model.DownloadableLanguage
 import com.example.translingo.domain.repository.LanguageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -29,15 +31,10 @@ class SelectLanguageViewModel @Inject constructor(
         loadingAsFlow
     )
     { searchQuery, allLanguages, savedSourceLanguage, savedTargetLanguage, loading ->
-        val filteredLanguages = if (searchQuery.isEmpty()) allLanguages
-        else {
-            allLanguages.filter { downloadableLanguage ->
-                val name = downloadableLanguage.language.displayName
-                val code = downloadableLanguage.language.languageCode
-                name.contains(searchQuery, ignoreCase = true) ||
-                        code.contains(searchQuery, ignoreCase = true)
-            }
-        }
+        val shouldFilter = searchQuery.isNotEmpty() && searchQuery.isNotBlank()
+        val filteredLanguages = if (shouldFilter) getFilteredList(allLanguages, searchQuery)
+        else allLanguages
+
         SelectLanguageUiState(
             languages = filteredLanguages,
             savedSourceLanguage = savedSourceLanguage,
@@ -46,7 +43,8 @@ class SelectLanguageViewModel @Inject constructor(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), initialValue = null)
 
-    val sideEffectChannel = Channel<SelectLanguageSideEffect>()
+    private val sideEffectChannel = Channel<SelectLanguageSideEffect>()
+    val sideEffect = sideEffectChannel.receiveAsFlow()
 
     fun onEvent(event: SelectLanguageEvent) {
         when (event) {
@@ -100,5 +98,17 @@ class SelectLanguageViewModel @Inject constructor(
     private suspend fun handleLanguageSelected() {
         loadingAsFlow.value = false
         sideEffectChannel.send(SelectLanguageSideEffect.OnLanguageSelected)
+    }
+
+    private fun getFilteredList(
+        allLanguages: List<DownloadableLanguage>,
+        searchQuery: String
+    ): List<DownloadableLanguage> {
+        return allLanguages.filter { downloadableLanguage ->
+            val name = downloadableLanguage.language.displayName
+            val code = downloadableLanguage.language.languageCode
+            name.contains(searchQuery, ignoreCase = true) ||
+                    code.contains(searchQuery, ignoreCase = true)
+        }
     }
 }

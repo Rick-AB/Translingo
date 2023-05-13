@@ -1,7 +1,6 @@
 package com.example.translingo.domain.repository
 
 import com.example.translingo.domain.model.DownloadableLanguage
-import com.example.translingo.domain.model.History
 import com.example.translingo.domain.model.Language
 import kotlinx.coroutines.flow.Flow
 

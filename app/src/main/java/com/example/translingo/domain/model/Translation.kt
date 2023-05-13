@@ -1,6 +1,9 @@
 package com.example.translingo.domain.model
 
-data class History(
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class Translation(
     val id: Int,
     val originalText: String,
     val translatedText: String,
