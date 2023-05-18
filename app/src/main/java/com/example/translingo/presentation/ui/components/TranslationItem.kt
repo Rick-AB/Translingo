@@ -40,9 +40,12 @@ fun TranslationItem(
         shape = shape,
         elevation = CardDefaults.cardElevation(elevation),
         onClick = onItemClick,
-        modifier = modifier.padding(top = 12.dp, bottom = 8.dp, start = 24.dp, end = 16.dp)
+        modifier = modifier
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(top = 12.dp, bottom = 8.dp, start = 24.dp, end = 16.dp)
+        ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = translationItem.originalText,

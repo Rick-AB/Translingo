@@ -4,8 +4,9 @@
     <string name="all_languages">All Languages</string>
     <string name="translate_to">Translate to</string>
     <string name="please_select_language">Please select a language</string>
-    <string name="loading">Loading...</string>
+    <string name="loading">Loading…</string>
     <string name="saved">Saved</string>
     <string name="save_key_phrases">Save key phrases</string>
     <string name="save_key_phrases_prompt">Tap the star icon to save translations that you use most</string>
+    <string name="history">History</string>
 </resources>

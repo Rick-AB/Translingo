@@ -55,7 +55,7 @@ class HistoryViewModel @Inject constructor(
         }.flatMap { (key, values) ->
             val headerList = listOf(HistoryItem.Header(key))
             val itemList = values.map(HistoryItem::Item)
-            headerList + itemList
+            itemList + headerList
         }
     }
 

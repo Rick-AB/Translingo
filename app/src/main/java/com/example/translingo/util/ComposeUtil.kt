@@ -2,6 +2,7 @@ package com.example.translingo.util
 
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
+import androidx.compose.material.SwipeableState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -12,6 +13,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.example.translingo.presentation.home.States
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectIndexed
 import kotlinx.coroutines.launch
@@ -37,3 +39,17 @@ inline fun <reified T> Flow<T>.observeWithLifecycle(
         }
     }
 }
+
+val SwipeableState<States>.currentFraction: Float
+    get() {
+        val fraction = progress.fraction
+        val initialValue = progress.from
+        val targetValue = progress.to
+
+        return when {
+            initialValue == States.Collapsed && targetValue == States.Collapsed -> 0f
+            initialValue == States.Expanded && targetValue == States.Expanded -> 1f
+            initialValue == States.Collapsed && targetValue == States.Expanded -> fraction
+            else -> 1f - fraction
+        }
+    }

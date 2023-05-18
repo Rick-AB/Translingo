@@ -2,7 +2,6 @@ package com.example.translingo.presentation.home
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Transition
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.fadeIn
@@ -11,9 +10,25 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.with
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.FractionalThreshold
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -21,58 +36,114 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material3.*
+import androidx.compose.material.rememberSwipeableState
+import androidx.compose.material.swipeable
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
-import androidx.constraintlayout.compose.ConstraintLayout
-import androidx.constraintlayout.compose.Dimension
 import com.example.translingo.R
-import com.example.translingo.domain.model.Language
 import com.example.translingo.domain.model.Translation
+import com.example.translingo.presentation.history.HistoryEvent
 import com.example.translingo.presentation.history.HistoryScreen
+import com.example.translingo.presentation.history.HistoryTopAppBar
+import com.example.translingo.presentation.history.HistoryUiState
 import com.example.translingo.presentation.languages.LanguageType
 import com.example.translingo.presentation.navigation.TranslingoDestinations
 import com.example.translingo.presentation.ui.components.TopAppBarIcon
 import com.example.translingo.presentation.ui.theme.Cerulean
-import com.example.translingo.presentation.ui.theme.TranslingoTheme
 import com.example.translingo.presentation.ui.theme.White
+import com.example.translingo.util.currentFraction
+import com.example.translingo.util.keyboardAsState
 import com.example.translingo.util.observeWithLifecycle
 import com.kiwi.navigationcompose.typed.Destination
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
-@OptIn(ExperimentalLayoutApi::class)
+enum class States { Expanded, Collapsed }
+enum class ViewState { History, TranslationIdle, TranslationActive, TranslationDone }
+
 @Composable
 fun HomeScreen(
     homeUiState: HomeUiState,
+    historyUiState: HistoryUiState,
     translationArg: Translation?,
     homeSideEffect: Flow<HomeSideEffect>,
-    onEvent: (HomeEvent) -> Unit,
+    onHomeEvent: (HomeEvent) -> Unit,
+    onHistoryEvent: (HistoryEvent) -> Unit,
     onNavigate: (Destination) -> Unit
 ) {
+    val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
-    val isTranslationActive = WindowInsets.isImeVisible
-    val clearText: () -> Unit = { onEvent(HomeEvent.OnTranslate("")) }
+    val isKeyboardVisible by keyboardAsState()
+    val clearText: () -> Unit = { onHomeEvent(HomeEvent.OnTranslate("")) }
+    val swipeableState = rememberSwipeableState(States.Collapsed)
+
+
+    val activeView by remember {
+        derivedStateOf {
+            when {
+                isKeyboardVisible -> ViewState.TranslationActive
+                !isKeyboardVisible && homeUiState.originalText.isNotEmpty() -> ViewState.TranslationDone
+                swipeableState.currentFraction <= 0.5f -> ViewState.TranslationIdle
+                else -> ViewState.History
+            }
+        }
+    }
+
+    val getTranslationAlpha: () -> Float = {
+        val currentFraction = swipeableState.currentFraction
+        if (currentFraction <= 0.5f) {
+            1.minus(currentFraction.times(2)) // fully invisible halfway through the animation
+        } else {
+            0f
+        }
+    }
+    val getHistoryAlpha: () -> Float = {
+        val currentFraction = swipeableState.currentFraction
+        if (currentFraction <= 0.45f) {
+            0f
+        } else {
+            convertAlphaRange(currentFraction, 0.5f..1f, 0f..1f)
+        }
+    }
 
     LaunchedEffect(key1 = Unit) {
         if (translationArg != null) {
-            onEvent(HomeEvent.OnTranslate(translationArg.originalText))
+            onHomeEvent(HomeEvent.OnTranslate(translationArg.originalText))
         }
-        onEvent(HomeEvent.OnForeground)
+        onHomeEvent(HomeEvent.OnForeground)
     }
 
     homeSideEffect.observeWithLifecycle {
@@ -87,96 +158,182 @@ fun HomeScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            HomeScreenTopAppBar(
-                isTranslationActive = isTranslationActive,
-                isTranslationEmpty = homeUiState.originalText.isEmpty(),
-                onBackArrowClick = {
-                    clearText()
-                    focusManager.clearFocus()
-                },
-                onClearIconClick = clearText,
-                onHistoryIconClick = {},
-                onFavoriteIconClick = { onNavigate(TranslingoDestinations.Favorite) }
-            )
+            if (activeView == ViewState.History) {
+                HistoryTopAppBar(modifier = Modifier.graphicsLayer { alpha = getHistoryAlpha() }) {
+                    scope.launch { swipeableState.snapTo(States.Collapsed) }
+                }
+            } else {
+                HomeScreenTopAppBar(
+                    modifier = Modifier.graphicsLayer {
+                        alpha = getTranslationAlpha()
+                    },
+                    isTranslationActive = isKeyboardVisible,
+                    isTranslationEmpty = homeUiState.originalText.isEmpty(),
+                    onBackArrowClick = {
+                        clearText()
+                        focusManager.clearFocus()
+                    },
+                    onClearIconClick = clearText,
+                    onHistoryIconClick = {
+                        scope.launch {
+                            focusManager.clearFocus()
+                            swipeableState.snapTo(States.Expanded)
+                        }
+                    },
+                    onFavoriteIconClick = { onNavigate(TranslingoDestinations.Favorite) }
+                )
+            }
         },
     ) { innerPadding ->
+
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.primary)
                 .padding(top = innerPadding.calculateTopPadding())
+                .navigationBarsPadding()
 
         ) {
+            val density = LocalDensity.current
+            val surfaceMinHeight = maxHeight.times(0.7f)
+            val minHeightInPx = with(density) { surfaceMinHeight.toPx() }
+            val maxHeightInPx = with(density) { maxHeight.toPx() }
+            val historyListState = rememberLazyListState()
+            val anchors =
+                mapOf(
+                    minHeightInPx to States.Collapsed,
+                    maxHeightInPx to States.Expanded
+                )
 
-            val height = remember(isTranslationActive) {
-                if (isTranslationActive) maxHeight.times(0.6f)
-                else maxHeight.times(0.7f)
+            val height by remember {
+                derivedStateOf { with(density) { swipeableState.offset.value.toDp() } }
             }
-            val animatedHeight by animateDpAsState(targetValue = height, animationSpec = tween(150))
 
-            ConstraintLayout(
+            val topPadding = surfaceMinHeight.plus(24.dp)
+            LanguageButtons(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .navigationBarsPadding()
-                    .imePadding()
-            ) {
-                val (surface, languageButtons, anchor1, anchor2) = createRefs()
-                val barrier = createTopBarrier(anchor1, anchor2)
-                val guideLine = createGuidelineFromTop(0.8f)
+                    .padding(top = topPadding)
+                    .fillMaxWidth(),
+                homeUiState = homeUiState,
+                onEvent = onHomeEvent,
+                onNavigate = onNavigate
+            )
+
+
+            val nestedScrollConnection = remember {
+                object : NestedScrollConnection {
+                    override suspend fun onPostFling(
+                        consumed: Velocity,
+                        available: Velocity
+                    ): Velocity {
+                        swipeableState.performFling(velocity = available.y)
+                        return super.onPostFling(consumed, available)
+                    }
+
+                    override fun onPostScroll(
+                        consumed: Offset,
+                        available: Offset,
+                        source: NestedScrollSource
+                    ): Offset {
+                        val delta = available.y
+                        return Offset(0f, swipeableState.performDrag(delta))
+                    }
+
+                    override suspend fun onPreFling(available: Velocity): Velocity {
+                        return if (available.y < 0) {
+                            swipeableState.performFling(available.y)
+                            available
+                        } else {
+                            available
+                        }
+                    }
+
+                    override fun onPreScroll(
+                        available: Offset,
+                        source: NestedScrollSource
+                    ): Offset {
+                        val delta = available.y
+                        return if (delta > 0) Offset(0f, swipeableState.performDrag(delta))
+                        else Offset.Zero
+                    }
+                }
+            }
+
+            Column(modifier = Modifier.imePadding()) {
                 Surface(
                     color = White,
                     shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp),
-                    modifier = Modifier.constrainAs(surface) {
-                        top.linkTo(parent.top)
-                        bottom.linkTo(languageButtons.top, 16.dp)
-                        start.linkTo(parent.start)
-                        end.linkTo(parent.end)
-                        this.height = Dimension.fillToConstraints
-                    }
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(height)
+                        .then(
+                            if (activeView == ViewState.TranslationIdle || activeView == ViewState.History) {
+                                Modifier
+                                    .swipeable(
+                                        state = swipeableState,
+                                        anchors = anchors,
+                                        orientation = Orientation.Vertical,
+                                        thresholds = { _, _ -> FractionalThreshold(0.5f) }
+                                    )
+                                    .nestedScroll(nestedScrollConnection)
+                            } else {
+                                Modifier
+                            }
+                        )
                 ) {
-//                    HistoryScreen()
-                    TranslationBody(
-                        originalText = homeUiState.originalText,
-                        translatedText = homeUiState.translatedText,
-                        modifier = Modifier
-                    ) { onEvent(HomeEvent.OnTranslate(it)) }
-                }
+                    Box {
+                        when (activeView) {
+                            ViewState.History -> {
+                                HistoryScreen(
+                                    uiState = historyUiState,
+                                    onEvent = onHistoryEvent,
+                                    listState = historyListState,
+                                    onHistoryItemClick = {
+                                        onHomeEvent(HomeEvent.OnTranslate(it.originalText))
+                                        scope.launch { swipeableState.snapTo(States.Collapsed) }
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .graphicsLayer {
+                                            alpha = getHistoryAlpha()
+                                        }
+                                )
+                            }
 
-                LanguageButtons(
-                    modifier = Modifier.constrainAs(languageButtons) {
-                        start.linkTo(parent.start)
-                        end.linkTo(parent.end)
-                        bottom.linkTo(barrier)
-                    },
-                    homeUiState = homeUiState,
-                    onEvent = onEvent,
-                    onNavigate = onNavigate
-                )
-
-                Box(modifier = Modifier.constrainAs(anchor2) {
-                    bottom.linkTo(parent.bottom)
-                    start.linkTo(parent.start)
-                    end.linkTo(parent.end)
-                    width = Dimension.fillToConstraints
-                    this.height = Dimension.value(1.dp)
-                })
-
-                if (!isTranslationActive) {
-                    Box(modifier = Modifier
-                        .constrainAs(anchor1) {
-                            bottom.linkTo(parent.bottom)
-                            start.linkTo(parent.start)
-                            end.linkTo(parent.end)
-                            top.linkTo(guideLine)
-                            this.height = Dimension.fillToConstraints
-                            width = Dimension.fillToConstraints
+                            else -> {
+                                TranslationBody(
+                                    originalText = homeUiState.originalText,
+                                    translatedText = homeUiState.translatedText,
+                                    modifier = Modifier.graphicsLayer {
+                                        alpha = getTranslationAlpha()
+                                    }
+                                ) { onHomeEvent(HomeEvent.OnTranslate(it)) }
+                            }
                         }
-                    )
+
+                        SurfaceIndicator(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 8.dp)
+                        )
+                    }
                 }
             }
         }
     }
+}
 
+
+@Composable
+fun SurfaceIndicator(modifier: Modifier) {
+    Box(
+        modifier = modifier
+            .background(
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
+                shape = RoundedCornerShape(50),
+            )
+            .size(width = 36.dp, height = 4.dp),
+    )
 }
 
 @Composable
@@ -186,7 +343,10 @@ fun LanguageButtons(
     onEvent: (HomeEvent) -> Unit,
     onNavigate: (Destination) -> Unit
 ) {
-    val transition = updateTransition(targetState = homeUiState, label = "buttonTransition")
+    val targetState =
+        remember(homeUiState.targetLanguage, homeUiState.sourceLanguage) { homeUiState }
+
+    val transition = updateTransition(targetState = targetState, label = "buttonTransition")
 
     Row(
         modifier = modifier,
@@ -266,6 +426,7 @@ fun LanguageButton(
 
 @Composable
 fun HomeScreenTopAppBar(
+    modifier: Modifier,
     isTranslationActive: Boolean,
     isTranslationEmpty: Boolean,
     onBackArrowClick: () -> Unit,
@@ -274,6 +435,7 @@ fun HomeScreenTopAppBar(
     onFavoriteIconClick: () -> Unit
 ) {
     AnimatedContent(
+        modifier = modifier,
         targetState = isTranslationActive,
         transitionSpec = { fadeIn(tween(300)) with fadeOut(tween(500)) }
     ) { isTranslationActiveState ->
@@ -390,15 +552,11 @@ fun TranslationBody(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun HomePrev() {
-    TranslingoTheme {
-        val source = Language("en", "English")
-        val target = Language("es", "Spanish")
-        val state = remember {
-            mutableStateOf(HomeUiState("HER", "Ella", source, target, false))
-        }
-        HomeScreen(state.value, null, emptyFlow(), {}, {})
-    }
+private fun convertAlphaRange(
+    value: Float,
+    originalRange: ClosedRange<Float>,
+    targetRange: ClosedRange<Float>
+): Float {
+    val ratio = (value - originalRange.start) / (originalRange.endInclusive - originalRange.start)
+    return (ratio * (targetRange.endInclusive - targetRange.start))
 }

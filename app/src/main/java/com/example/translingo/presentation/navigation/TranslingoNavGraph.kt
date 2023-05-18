@@ -8,6 +8,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import com.example.translingo.presentation.favorite.FavoriteScreen
 import com.example.translingo.presentation.favorite.FavoriteViewModel
+import com.example.translingo.presentation.history.HistoryViewModel
 import com.example.translingo.presentation.home.HomeScreen
 import com.example.translingo.presentation.home.HomeViewModel
 import com.example.translingo.presentation.languages.SelectLanguageScreen
@@ -24,14 +25,18 @@ internal fun TranslingoNavGraph(navController: NavHostController) {
         startDestination = createRoutePattern<TranslingoDestinations.Home>()
     ) {
         composable<TranslingoDestinations.Home> {
-            val viewModel: HomeViewModel = hiltViewModel()
-            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            val homeViewModel: HomeViewModel = hiltViewModel()
+            val homeState by homeViewModel.uiState.collectAsStateWithLifecycle()
+            val historyViewModel: HistoryViewModel = hiltViewModel()
+            val historyState by historyViewModel.uiState.collectAsStateWithLifecycle()
 
             HomeScreen(
-                homeUiState = uiState,
+                homeUiState = homeState,
+                historyUiState = historyState,
                 translationArg = translation,
-                homeSideEffect = viewModel.sideEffect,
-                onEvent = viewModel::onEvent,
+                homeSideEffect = homeViewModel.sideEffect,
+                onHomeEvent = homeViewModel::onEvent,
+                onHistoryEvent = historyViewModel::onEvent,
                 onNavigate = navController::navigate
             )
         }

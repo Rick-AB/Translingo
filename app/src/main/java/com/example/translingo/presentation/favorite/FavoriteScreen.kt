@@ -71,7 +71,7 @@ fun FavoriteScreen(
                 searchQuery = uiState.searchQuery,
                 scrollBehavior = scrollBehavior,
                 onSearchIconClick = {
-                    scrollBehavior.state.heightOffset = -200f//workaround to collapse LargeTopAppbar
+                    scrollBehavior.state.heightOffset = -500f//workaround to collapse LargeTopAppbar
                     searchActive = true
                 },
                 onSearchChange = { onEvent(FavoriteEvent.OnSearchQueryChange(it)) },
