@@ -164,9 +164,7 @@ fun HomeScreen(
                 }
             } else {
                 HomeScreenTopAppBar(
-                    modifier = Modifier.graphicsLayer {
-                        alpha = getTranslationAlpha()
-                    },
+                    modifier = Modifier.graphicsLayer { alpha = getTranslationAlpha() },
                     isTranslationActive = isKeyboardVisible,
                     isTranslationEmpty = homeUiState.originalText.isEmpty(),
                     onBackArrowClick = {
