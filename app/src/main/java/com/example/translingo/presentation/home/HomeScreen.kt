@@ -84,12 +84,8 @@ import com.example.translingo.presentation.ui.theme.Cerulean
 import com.example.translingo.presentation.ui.theme.White
 import com.example.translingo.util.currentFraction
 import com.example.translingo.util.keyboardAsState
-import com.example.translingo.util.observeWithLifecycle
 import com.kiwi.navigationcompose.typed.Destination
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
-import kotlin.time.Duration.Companion.milliseconds
 
 enum class States { Expanded, Collapsed }
 enum class ViewState { History, TranslationIdle, TranslationActive, TranslationDone }
@@ -99,7 +95,6 @@ fun HomeScreen(
     homeUiState: HomeUiState,
     historyUiState: HistoryUiState,
     translationArg: Translation?,
-    homeSideEffect: Flow<HomeSideEffect>,
     onHomeEvent: (HomeEvent) -> Unit,
     onHistoryEvent: (HistoryEvent) -> Unit,
     onNavigate: (Destination) -> Unit
@@ -144,15 +139,6 @@ fun HomeScreen(
             onHomeEvent(HomeEvent.OnTranslate(translationArg.originalText))
         }
         onHomeEvent(HomeEvent.OnForeground)
-    }
-
-    homeSideEffect.observeWithLifecycle {
-        when (it) {
-            is HomeSideEffect.SelectLanguage -> {
-                delay(500.milliseconds)
-                onNavigate(TranslingoDestinations.SelectLanguage(it.languageType))
-            }
-        }
     }
 
     Scaffold(

@@ -3,8 +3,8 @@ package com.example.translingo.presentation.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.translingo.domain.model.Language
-import com.example.translingo.domain.repository.TranslationRepository
 import com.example.translingo.domain.repository.LanguageRepository
+import com.example.translingo.domain.repository.TranslationRepository
 import com.example.translingo.presentation.languages.LanguageType
 import com.example.translingo.util.Empty
 import com.google.mlkit.nl.translate.TranslateLanguage
@@ -102,8 +102,10 @@ class HomeViewModel @Inject constructor(
     private fun checkLanguages() {
         viewModelScope.launch {
             val sourceLanguage = languageRepository.getSourceLanguage()
-            if (sourceLanguage == null)
+            if (sourceLanguage == null) {
                 sideEffectChannel.send(HomeSideEffect.SelectLanguage(LanguageType.SOURCE))
+                return@launch
+            }
 
             val targetLanguage = languageRepository.getTargetLanguage()
             if (targetLanguage == null)

@@ -61,7 +61,6 @@ import com.example.translingo.util.showLongToast
 @Composable
 fun SelectLanguageScreen(
     uiState: SelectLanguageUiState?,
-    sideEffect: SelectLanguageSideEffect?,
     languageType: LanguageType,
     onEvent: (SelectLanguageEvent) -> Unit,
     goBack: () -> Unit
@@ -79,11 +78,6 @@ fun SelectLanguageScreen(
             uiState?.savedSourceLanguage == null || uiState.savedTargetLanguage == null
         if (shouldShowToast) context.showLongToast(R.string.please_select_language)
         else goBack()
-    }
-
-    when (sideEffect) {
-        SelectLanguageSideEffect.OnLanguageSelected -> goBack()
-        null -> {}
     }
 
     BackHandler {
