@@ -13,13 +13,16 @@ import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
+import com.example.translingo.domain.model.Translation as DomainModelTranslation
 
 @OptIn(FlowPreview::class)
 @HiltViewModel
@@ -27,9 +30,14 @@ class HomeViewModel @Inject constructor(
     private val languageRepository: LanguageRepository,
     private val translationRepository: TranslationRepository
 ) : ViewModel() {
+    private var job: Job = Job()
+        get() {
+            if (field.isCancelled) field = Job()
+            return field
+        }
+
     private val sourceLanguageFlow = languageRepository.getSourceLanguageAsFlow()
     private val targetLanguageFlow = languageRepository.getTargetLanguageAsFlow()
-
     private val builder = TranslatorOptions.Builder()
     private val translatorStateAsFlow = combine(
         sourceLanguageFlow,
@@ -52,15 +60,24 @@ class HomeViewModel @Inject constructor(
     }
 
     private val originalTextAsFlow = MutableStateFlow("")
-
     private val translatedTextAsFlow = originalTextAsFlow
         .debounce(700.milliseconds)
         .combine(translatorStateAsFlow) { originalText, translatorState ->
             if (translatorState == null) return@combine String.Empty
             else {
+                if (originalText.isEmpty() || originalText.isBlank()) return@combine String.Empty
+
                 val translator = translatorState.translator
                 translator.downloadModelIfNeeded().await()
-                translator.translate(originalText).await()
+                val translatedText = translator.translate(originalText).await()
+                saveTranslation(
+                    originalText,
+                    translatedText,
+                    translatorState.sourceLanguage,
+                    translatorState.targetLanguage
+                )
+
+                translatedText
             }
         }
 
@@ -73,15 +90,13 @@ class HomeViewModel @Inject constructor(
         ) { originalText, translatedText, sourceLanguage, targetLanguage ->
             if (sourceLanguage == null || targetLanguage == null) return@combine HomeUiState.default()
 
-            val homeUiState = HomeUiState(
+            HomeUiState(
                 originalText = originalText,
                 translatedText = translatedText,
                 sourceLanguage = sourceLanguage,
                 targetLanguage = targetLanguage,
                 loading = false
             )
-            saveTranslation()
-            homeUiState
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), HomeUiState.default())
 
     private val sideEffectChannel = Channel<HomeSideEffect>()
@@ -129,35 +144,33 @@ class HomeViewModel @Inject constructor(
         return allLanguages.find { it == language }
     }
 
-    private fun saveTranslation() {
-        val history = createHistory()
+    private fun saveTranslation(
+        originalText: String,
+        translatedText: String,
+        sourceLanguage: Language,
+        targetLanguage: Language
+    ) {
+        job.cancel()
+        viewModelScope.launch(job) {
+            delay(1300.milliseconds) // allow time for user to continue typing
+            val id =
+                ("${sourceLanguage.languageCode}-${targetLanguage.languageCode}"
+                        + originalText.lowercase() + translatedText.lowercase()).hashCode()
 
-        if (history.originalText.isNotEmpty() && history.originalText.isNotBlank()) {
-            viewModelScope.launch {
-                translationRepository.saveTranslation(history)
-            }
+            val translation = DomainModelTranslation(
+                id = id,
+                originalText = originalText,
+                translatedText = translatedText,
+                sourceLanguage = sourceLanguage,
+                targetLanguage = targetLanguage,
+                isFavorite = false,
+                date = LocalDate.now().toString()
+            )
+
+            translationRepository.saveTranslation(translation)
         }
     }
 
-    private fun createHistory(): com.example.translingo.domain.model.Translation {
-        val state = uiState.value
-        val originalText = state.originalText
-        val translatedText = state.translatedText
-        val sourceLanguageCode = state.sourceLanguage.languageCode
-        val targetLanguageCode = state.targetLanguage.languageCode
-        val id =
-            ("$sourceLanguageCode-$targetLanguageCode" + originalText.lowercase() + translatedText.lowercase()).hashCode()
-
-        return com.example.translingo.domain.model.Translation(
-            id = id,
-            originalText = originalText,
-            translatedText = translatedText,
-            sourceLanguage = state.sourceLanguage,
-            targetLanguage = state.targetLanguage,
-            isFavorite = false,
-            date = LocalDate.now().toString()
-        )
-    }
 
     data class TranslatorState(
         val translator: Translator,

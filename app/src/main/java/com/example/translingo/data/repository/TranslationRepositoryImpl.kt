@@ -6,20 +6,19 @@ import com.example.translingo.data.toDomain
 import com.example.translingo.data.toEntity
 import com.example.translingo.domain.model.Translation
 import com.example.translingo.domain.repository.TranslationRepository
-import com.google.mlkit.nl.translate.Translator
-import com.google.mlkit.nl.translate.TranslatorOptions
+import com.google.mlkit.nl.languageid.LanguageIdentification
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 class TranslationRepositoryImpl @Inject constructor(
     database: TranslingoDatabase
 ) : TranslationRepository {
+    private val unidentifiableLanguageCode = "und"
     private val historyDao = database.historyDao()
     override suspend fun saveTranslation(translation: Translation) {
+        if (!validateTranslation(translation.translatedText)) return
         historyDao.insertTranslation(translation.toEntity())
     }
 
@@ -39,5 +38,11 @@ class TranslationRepositoryImpl @Inject constructor(
     override fun getFavoriteTranslationsByDateDescAsFlow(): Flow<List<Translation>> {
         return historyDao.getFavoriteTranslationsByDateDesc()
             .map { list -> list.map(TranslationEntity::toDomain) }
+    }
+
+    private suspend fun validateTranslation(translatedText: String): Boolean {
+        val languageIdentifier = LanguageIdentification.getClient()
+        val identifiedLanguage = languageIdentifier.identifyLanguage(translatedText).await()
+        return identifiedLanguage != unidentifiableLanguageCode
     }
 }

@@ -173,8 +173,8 @@ fun HomeScreen(
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.primary)
                 .padding(top = innerPadding.calculateTopPadding())
+                .background(MaterialTheme.colorScheme.primary)
                 .navigationBarsPadding()
 
         ) {
@@ -214,15 +214,6 @@ fun HomeScreen(
                         return super.onPostFling(consumed, available)
                     }
 
-                    override fun onPostScroll(
-                        consumed: Offset,
-                        available: Offset,
-                        source: NestedScrollSource
-                    ): Offset {
-                        val delta = available.y
-                        return Offset(0f, swipeableState.performDrag(delta))
-                    }
-
                     override suspend fun onPreFling(available: Velocity): Velocity {
                         return if (available.y < 0) {
                             swipeableState.performFling(available.y)
@@ -232,14 +223,25 @@ fun HomeScreen(
                         }
                     }
 
+                    override fun onPostScroll(
+                        consumed: Offset,
+                        available: Offset,
+                        source: NestedScrollSource
+                    ): Offset {
+                        val delta = available.y
+                        return swipeableState.performDrag(delta).toOffset()
+                    }
+
                     override fun onPreScroll(
                         available: Offset,
                         source: NestedScrollSource
                     ): Offset {
                         val delta = available.y
-                        return if (delta > 0) Offset(0f, swipeableState.performDrag(delta))
+                        return if (delta > 0) swipeableState.performDrag(delta).toOffset()
                         else Offset.Zero
                     }
+
+                    private fun Float.toOffset() = Offset(0f, this)
                 }
             }
 
@@ -276,11 +278,10 @@ fun HomeScreen(
                                         onHomeEvent(HomeEvent.OnTranslate(it.originalText))
                                         scope.launch { swipeableState.snapTo(States.Collapsed) }
                                     },
+                                    alpha = getHistoryAlpha,
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .graphicsLayer {
-                                            alpha = getHistoryAlpha()
-                                        }
+                                        .graphicsLayer { alpha = getHistoryAlpha() }
                                 )
                             }
 

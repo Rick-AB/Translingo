@@ -2,7 +2,6 @@ package com.example.translingo.presentation.history
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -40,69 +39,77 @@ fun HistoryScreen(
     modifier: Modifier,
     listState: LazyListState,
     uiState: HistoryUiState,
+    alpha: () -> Float,
     onEvent: (HistoryEvent) -> Unit,
     onHistoryItemClick: (Translation) -> Unit
 ) {
-    Box(modifier = modifier.fillMaxSize()) {
-        val items = remember(uiState.items) { uiState.items }
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(5.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp),
-            reverseLayout = true
-        ) {
-            items(
-                items = items,
-                key = {
-                    when (it) {
-                        is HistoryItem.Header -> it.text
-                        is HistoryItem.Item -> it.translation.id
+    val useAnimationModifier by remember {
+        derivedStateOf {
+            alpha() >= 0.99f
+        }
+    }
+
+    val items = remember(uiState.items) { uiState.items }
+    LazyColumn(
+        state = listState,
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(5.dp),
+        contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp),
+        reverseLayout = true
+    ) {
+        items(
+            items = items,
+            key = {
+                when (it) {
+                    is HistoryItem.Header -> it.text
+                    is HistoryItem.Item -> it.translation.id
+                }
+            }
+        ) { item ->
+            val deleteSwipeActionConfig = remember(item) {
+                DefaultSwipeActionsConfig.copy(
+                    stayDismissed = true,
+                    onDismiss = {
+                        onEvent(HistoryEvent.OnDeleteHistory((item as HistoryItem.Item).translation))
                     }
-                }
-            ) { item ->
-                val deleteSwipeActionConfig = remember(item) {
-                    DefaultSwipeActionsConfig.copy(
-                        stayDismissed = true,
-                        onDismiss = {
-                            onEvent(HistoryEvent.OnDeleteHistory((item as HistoryItem.Item).translation))
-                        }
-                    )
-                }
+                )
+            }
 
-                when (item) {
-                    is HistoryItem.Header -> HistoryDateHeader(
-                        modifier = Modifier.padding(start = 24.dp),
-                        date = item.text
-                    )
+            when (item) {
+                is HistoryItem.Header -> HistoryDateHeader(
+                    modifier = Modifier.padding(start = 24.dp),
+                    date = item.text
+                )
 
-                    is HistoryItem.Item -> SwipeActions(
-                        startActionsConfig = deleteSwipeActionConfig,
-                        endActionsConfig = deleteSwipeActionConfig,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .animateItemPlacement()
-                    ) { state ->
-                        val animateCorners by remember {
-                            derivedStateOf {
-                                state.progress.absoluteValue > 30
-                            }
-                        }
-
-                        val elevation by animateDpAsState(
-                            targetValue = when {
-                                animateCorners -> 6.dp
-                                else -> 0.dp
-                            }
+                is HistoryItem.Item -> SwipeActions(
+                    startActionsConfig = deleteSwipeActionConfig,
+                    endActionsConfig = deleteSwipeActionConfig,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (useAnimationModifier) Modifier.animateItemPlacement()
+                            else Modifier
                         )
-
-                        TranslationItem(
-                            translationItem = item.translation,
-                            elevation = elevation,
-                            onFavoriteIconClick = { onEvent(HistoryEvent.OnToggleFavorite(item.translation.id)) }
-                        ) {
-                            onHistoryItemClick(item.translation)
+                ) { state ->
+                    val animateCorners by remember {
+                        derivedStateOf {
+                            state.progress.absoluteValue > 30
                         }
+                    }
+
+                    val elevation by animateDpAsState(
+                        targetValue = when {
+                            animateCorners -> 6.dp
+                            else -> 0.dp
+                        }
+                    )
+
+                    TranslationItem(
+                        translationItem = item.translation,
+                        elevation = elevation,
+                        onFavoriteIconClick = { onEvent(HistoryEvent.OnToggleFavorite(item.translation.id)) }
+                    ) {
+                        onHistoryItemClick(item.translation)
                     }
                 }
             }
@@ -162,6 +169,6 @@ fun HistoryPrev() {
             )
         }
         val state = HistoryUiState(dummy)
-        HistoryScreen(modifier = Modifier, rememberLazyListState(), state, {}) {}
+        HistoryScreen(modifier = Modifier, rememberLazyListState(), state, { 0f }, {}) {}
     }
 }
